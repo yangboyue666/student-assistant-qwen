@@ -12,7 +12,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # runner IPv6 出口不可用，Java 默认优先 IPv6 会导致连接被拒；统一强制走 IPv4
       JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
 
     steps:
@@ -23,26 +22,6 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-
-      - name: Configure Gradle mirrors
-        run: |
-          mkdir -p "$HOME/.gradle"
-          # GitHub runner 到 plugins-artifacts.gradle.org 被拒；全局（含 Flutter included build）
-          # 用阿里云镜像替换 Gradle 插件门户 / Google / Maven Central
-          cat > "$HOME/.gradle/init.gradle" <<'EOF'
-          settingsEvaluated { s ->
-            s.pluginManagement {
-              repositories {
-                clear()
-                maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-                maven { url 'https://maven.aliyun.com/repository/google' }
-                maven { url 'https://maven.aliyun.com/repository/public' }
-                gradlePluginPortal()
-              }
-            }
-          }
-          EOF
-          echo "== init.gradle =="; cat "$HOME/.gradle/init.gradle"
 
       - name: Prepare debug keystore
         run: |
@@ -67,13 +46,11 @@ jobs:
         run: |
           mkdir -p "$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
           chmod +x android/gradlew
-          # 让真实 wrapper 算出它自己的哈希目录（联网被拒也会先建目录）
           (cd android && ./gradlew --version) >/dev/null 2>&1 || true
           DISTS="$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
           HASH=$(find "$DISTS" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | head -1)
           echo "wrapper hash = $HASH"
           ROOT="$DISTS/$HASH"; mkdir -p "$ROOT"
-          # 用可靠的 curl 下载本体，使 wrapper 启动时跳过 Java 下载
           curl -4 -L --retry 5 --retry-all-errors \
             -o "$ROOT/gradle-8.14-bin.zip" \
             https://downloads.gradle.org/distributions/gradle-8.14-bin.zip
@@ -82,20 +59,21 @@ jobs:
           touch "$ROOT/gradle-8.14-bin.zip.ok"
           "$ROOT/gradle-8.14/bin/gradle" --version
 
-      - name: Isolated kotlin-dsl resolve trace
+      - name: Warm kotlin-dsl plugin into shared cache
         run: |
           GR="$HOME/.gradle/wrapper/dists/gradle-8.14-bin/$(ls "$HOME/.gradle/wrapper/dists/gradle-8.14-bin" | head -1)/gradle-8.14/bin/gradle"
           mkdir -p /tmp/kd && cd /tmp/kd
           cat > settings.gradle <<'EOF'
           pluginManagement {
             repositories {
-              maven { url 'https://maven.aliyun.com/repository/gradle-plugin'; allowInsecureProtocol = true }
-              gradlePluginPortal()
+              maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+              maven { url 'https://maven.aliyun.com/repository/google' }
+              maven { url 'https://maven.aliyun.com/repository/public' }
             }
           }
           EOF
           echo "plugins { id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0' }" > build.gradle
-          $GR help --no-daemon --info 2>&1 | grep -iE "Resource missing|Could not GET|Could not HEAD|Downloading|Download https|response|refused|reset|timeout|checksum|sha|signature|BUILD|5.2.0|Received status|peer|cert|SSL|redirect|Location" | head -60
+          $GR help --no-daemon
 
       - name: Build APK
         run: flutter build apk --release
