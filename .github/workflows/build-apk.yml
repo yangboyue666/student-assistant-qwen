@@ -52,6 +52,9 @@ jobs:
 
       - name: Build APK
         run: flutter build apk --release
+        env:
+          # runner 的 IPv6 出口被拒，Java 默认优先 IPv6 导致 wrapper 下载 Connection refused；强制走 IPv4
+          JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
 
       - name: Rename APK
         run: |
