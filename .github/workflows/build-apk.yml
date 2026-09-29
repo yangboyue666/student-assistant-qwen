@@ -68,12 +68,21 @@ jobs:
           HASH=$(ls "$DISTS" | head -1)
           GR="$DISTS/$HASH/gradle-8.10.2/bin/gradle"
           mkdir -p /tmp/gwarm && cd /tmp/gwarm
-          printf 'pluginManagement { repositories { gradlePluginPortal(); google(); mavenCentral() } }\n' > settings.gradle
-          printf "plugins { id 'org.gradle.kotlin.kotlin-dsl' version '4.5.0' }\n" > build.gradle
-          # 用能联网的独立守护进程把插件及依赖全部拉进共享 Gradle 缓存
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+            repositories { gradlePluginPortal(); google(); mavenCentral() }
+          }
+          EOF
+          cat > build.gradle <<'EOF'
+          plugins {
+            id 'org.gradle.kotlin.kotlin-dsl' version '4.5.0'
+            id 'com.android.application' version '8.13.0'
+            id 'org.jetbrains.kotlin.android' version '2.2.20'
+          }
+          EOF
+          # 用能联网的独立守护进程把工程实际用到的插件及依赖全部拉进共享缓存
           $GR --no-daemon help
-          echo "== cache warmed =="; ls "$HOME/.gradle/caches/modules-2/files-2.1" | head
-          # 预热完成后再开启全局离线，仅对后续 Flutter 构建生效
+          echo "== cache warmed =="
           echo "org.gradle.offline=true" >> "$HOME/.gradle/gradle.properties"
 
       - name: Build APK
