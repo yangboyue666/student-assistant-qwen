@@ -49,11 +49,11 @@ jobs:
           # 先用真实 wrapper 算出它自己的哈希目录（联网被拒也会建目录），再用可靠的 curl 下载填充，让 wrapper 跳过下载
           chmod +x android/gradlew
           DISTS="$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
+          echo "GRADLE_USER_HOME=${GRADLE_USER_HOME:-$HOME/.gradle}"
+          find "$HOME/.gradle/wrapper" -maxdepth 3 -type d 2>/dev/null | head -20
           (cd android && ./gradlew --version) >/dev/null 2>&1 || true
-          HASH=$(ls "$DISTS" 2>/dev/null | head -1)
-          if [ -z "$HASH" ]; then HASH=$(java -cp "$(find "$HOME/.gradle" -name 'gradle-wrapper*.jar' 2>/dev/null | head -1)" 2>/dev/null || true); fi
-          # 若 wrapper 未能生成哈希目录，用对 distributionUrl 的 MD5 自行计算
-          if [ -z "$HASH" ]; then HASH=$(printf '%s' "https://mirrors.cloud.tencent.com/gradle/gradle-8.14-bin.zip" | md5sum | cut -d' ' -f1); fi
+          echo "== dirs after wrapper attempt =="; find "$HOME/.gradle/wrapper" -maxdepth 3 -type d 2>/dev/null
+          HASH=$(find "$DISTS" -maxdepth 1 -mindepth 1 -type d 2>/dev/null -exec basename {} \; | head -1)
           echo "wrapper hash = $HASH"
           ROOT="$DISTS/$HASH"
           mkdir -p "$ROOT"
