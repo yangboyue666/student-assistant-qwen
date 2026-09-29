@@ -42,13 +42,23 @@ jobs:
 
       - name: Network diagnostics
         run: |
-          echo "== proxy env =="; env | grep -iE "proxy" || echo "no proxy env"
-          echo "== connectivity =="
-          for u in https://services.gradle.org https://downloads.gradle.org https://mirrors.cloud.tencent.com https://dl.google.com https://repo.maven.apache.org https://github.com; do
-            code=$(curl -s -m 15 -o /dev/null -w "%{http_code}" "$u" || echo "FAIL")
-            echo "$code  $u"
-          done
-          echo "== wrapper file in checkout =="; cat android/gradle/wrapper/gradle-wrapper.properties
+          echo "== DNS =="; getent ahosts downloads.gradle.org | head; getent ahosts mirrors.cloud.tencent.com | head
+          echo "== curl exact file, force IPv4 vs IPv6 =="
+          curl -4 -s -m 20 -o /dev/null -w "ipv4 official:%{http_code} ip=%{remote_ip}\n" https://downloads.gradle.org/distributions/gradle-8.14-bin.zip || echo ipv4-fail
+          curl -6 -s -m 20 -o /dev/null -w "ipv6 official:%{http_code} ip=%{remote_ip}\n" https://downloads.gradle.org/distributions/gradle-8.14-bin.zip || echo ipv6-fail
+          echo "== Java reproduce (default) =="
+          cat > /tmp/T.java <<'EOF'
+          import java.net.*; import java.io.*;
+          public class T { public static void main(String[] a) throws Exception {
+            URL u = new URL("https://downloads.gradle.org/distributions/gradle-8.14-bin.zip");
+            HttpURLConnection c=(HttpURLConnection)u.openConnection();
+            c.setConnectTimeout(15000); c.connect();
+            System.out.println("HTTP "+c.getResponseCode());
+          }}
+          EOF
+          cd /tmp && javac T.java && java T || echo "JAVA-DEFAULT-FAIL"
+          echo "== Java reproduce (preferIPv4) =="
+          java -Djava.net.preferIPv4Stack=true T || echo "JAVA-IPV4-FAIL"
 
       - name: Build APK
         run: flutter build apk --release
