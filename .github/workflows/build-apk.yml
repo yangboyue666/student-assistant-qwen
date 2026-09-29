@@ -51,8 +51,12 @@ jobs:
           DISTS="$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
           (cd android && ./gradlew --version) >/dev/null 2>&1 || true
           HASH=$(ls "$DISTS" 2>/dev/null | head -1)
-          echo "wrapper hash dir = $HASH"
+          if [ -z "$HASH" ]; then HASH=$(java -cp "$(find "$HOME/.gradle" -name 'gradle-wrapper*.jar' 2>/dev/null | head -1)" 2>/dev/null || true); fi
+          # 若 wrapper 未能生成哈希目录，用对 distributionUrl 的 MD5 自行计算
+          if [ -z "$HASH" ]; then HASH=$(printf '%s' "https://mirrors.cloud.tencent.com/gradle/gradle-8.14-bin.zip" | md5sum | cut -d' ' -f1); fi
+          echo "wrapper hash = $HASH"
           ROOT="$DISTS/$HASH"
+          mkdir -p "$ROOT"
           curl -4 -L --retry 5 --retry-all-errors \
             -o "$ROOT/gradle-8.14-bin.zip" \
             https://downloads.gradle.org/distributions/gradle-8.14-bin.zip
