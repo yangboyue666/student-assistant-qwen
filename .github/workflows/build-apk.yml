@@ -43,8 +43,21 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Java precise probe
+        run: |
+          cat > /tmp/J.java <<'EOF'
+          import java.net.*;
+          public class J { static void t(String s){ try {
+            HttpURLConnection c=(HttpURLConnection)new URL(s).openConnection();
+            c.setConnectTimeout(12000); c.setReadTimeout(12000); c.setInstanceFollowRedirects(true);
+            System.out.println(c.getResponseCode()+"  "+s+"  ->  "+c.getURL());
+          } catch(Exception e){ System.out.println("FAIL "+s+"  "+e); } }
+          public static void main(String[] a){
+            t("https://services.gradle.org/distributions/gradle-8.10.2-bin.zip");
+            t("https://downloads.gradle.org/distributions/gradle-8.10.2-bin.zip");
+          }}
+          EOF
+          cd /tmp && javac J.java && java -Djava.net.preferIPv4Stack=true J
 
       - name: Rename APK
         run: |
