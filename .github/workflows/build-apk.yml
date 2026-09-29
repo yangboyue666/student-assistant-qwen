@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # runner IPv6 出口不可用，Java 默认优先 IPv6 导致下载连接被拒；统一强制走 IPv4
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
 
     steps:
       - name: Checkout
@@ -19,7 +22,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.27.x
           channel: stable
 
       - name: Prepare debug keystore
