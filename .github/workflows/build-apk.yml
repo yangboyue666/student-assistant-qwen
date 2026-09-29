@@ -30,26 +30,14 @@ jobs:
           # GitHub runner 到 plugins-artifacts.gradle.org 被拒；全局（含 Flutter included build）
           # 用阿里云镜像替换 Gradle 插件门户 / Google / Maven Central
           cat > "$HOME/.gradle/init.gradle" <<'EOF'
-          allprojects {
-            buildscript {
-              repositories {
-                maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-                maven { url 'https://maven.aliyun.com/repository/google' }
-                maven { url 'https://maven.aliyun.com/repository/public' }
-              }
-            }
-            repositories {
-              maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-              maven { url 'https://maven.aliyun.com/repository/google' }
-              maven { url 'https://maven.aliyun.com/repository/public' }
-            }
-          }
           settingsEvaluated { s ->
             s.pluginManagement {
               repositories {
+                clear()
                 maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
                 maven { url 'https://maven.aliyun.com/repository/google' }
                 maven { url 'https://maven.aliyun.com/repository/public' }
+                gradlePluginPortal()
               }
             }
           }
