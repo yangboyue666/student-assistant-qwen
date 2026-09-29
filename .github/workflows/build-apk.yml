@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # runner IPv6 出口不可用，Java 默认优先 IPv6 导致下载连接被拒；统一强制走 IPv4
+      # runner IPv6 出口不可用，Java 默认优先 IPv6 会导致连接被拒；统一强制走 IPv4
       JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
 
     steps:
@@ -43,47 +43,34 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Pre-seed Gradle distribution
+      - name: Pre-seed Gradle 8.14 distribution
         run: |
+          # wrapper 的 distributionUrl 已指向腾讯镜像（对 Java 可能拒绝）；
+          # 先用真实 wrapper 算出它自己的哈希目录（联网被拒也会建目录），再用可靠的 curl 下载填充，让 wrapper 跳过下载
           chmod +x android/gradlew
-          DISTS="$HOME/.gradle/wrapper/dists/gradle-8.10.2-bin"
-          # 让真实 wrapper 先算出它的哈希目录（此步联网会被拒，忽略即可，目录会被创建）
+          DISTS="$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
           (cd android && ./gradlew --version) >/dev/null 2>&1 || true
           HASH=$(ls "$DISTS" 2>/dev/null | head -1)
           echo "wrapper hash dir = $HASH"
           ROOT="$DISTS/$HASH"
-          # 用可靠的 curl 下载（强制 IPv4、跟随重定向、多次重试）
           curl -4 -L --retry 5 --retry-all-errors \
-            -o "$ROOT/gradle-8.10.2-bin.zip" \
-            https://services.gradle.org/distributions/gradle-8.10.2-bin.zip
-          unzip -tq "$ROOT/gradle-8.10.2-bin.zip"
-          (cd "$ROOT" && unzip -q gradle-8.10.2-bin.zip)
-          touch "$ROOT/gradle-8.10.2-bin.zip.ok"
-          echo "== installed gradle =="
-          "$ROOT/gradle-8.10.2/bin/gradle" --version
+            -o "$ROOT/gradle-8.14-bin.zip" \
+            https://downloads.gradle.org/distributions/gradle-8.14-bin.zip
+          unzip -tq "$ROOT/gradle-8.14-bin.zip"
+          (cd "$ROOT" && unzip -q gradle-8.14-bin.zip)
+          touch "$ROOT/gradle-8.14-bin.zip.ok"
+          echo "== gradle 8.14 =="
+          "$ROOT/gradle-8.14/bin/gradle" --version
 
-      - name: Warm Gradle plugin cache
+      - name: Warm included-build plugin (kotlin-dsl) cache
         run: |
-          DISTS="$HOME/.gradle/wrapper/dists/gradle-8.10.2-bin"
-          HASH=$(ls "$DISTS" | head -1)
-          GR="$DISTS/$HASH/gradle-8.10.2/bin/gradle"
-          mkdir -p /tmp/gwarm && cd /tmp/gwarm
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-            repositories { gradlePluginPortal(); google(); mavenCentral() }
-          }
-          EOF
-          cat > build.gradle <<'EOF'
-          plugins {
-            id 'org.gradle.kotlin.kotlin-dsl' version '4.5.0'
-            id 'com.android.application' version '8.13.0'
-            id 'org.jetbrains.kotlin.android' version '2.2.20'
-          }
-          EOF
-          # 用能联网的独立守护进程把工程实际用到的插件及依赖全部拉进共享缓存
-          $GR --no-daemon help
-          echo "== cache warmed =="
-          echo "org.gradle.offline=true" >> "$HOME/.gradle/gradle.properties"
+          # 以与 Flutter 完全相同的 includeBuild 方式联网跑一次，提前把 flutter_tools 所需的
+          # org.gradle.kotlin.kotlin-dsl 等插件下载进共享缓存，消除 Flutter 构建时该请求的偶发拒绝
+          GR="$HOME/.gradle/wrapper/dists/gradle-8.14-bin/$(ls "$HOME/.gradle/wrapper/dists/gradle-8.14-bin" | head -1)/gradle-8.14/bin/gradle"
+          cd android
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "flutter.sdk=${FLUTTER_ROOT}" >> local.properties
+          $GR help --no-daemon || true
 
       - name: Build APK
         run: flutter build apk --release
