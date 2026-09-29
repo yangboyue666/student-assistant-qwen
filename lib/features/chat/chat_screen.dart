@@ -7,7 +7,6 @@ import '../../shared/widgets/glass_app_bar.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/section_indicator.dart';
 import '../../shared/widgets/animated_indicators.dart';
-import '../../core/llm/llm_service.dart';
 import '../../core/llm/model_manager.dart';
 import '../model/model_manager_screen.dart';
 import 'chat_controller.dart';

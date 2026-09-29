@@ -7,7 +7,6 @@ import '../../core/llm/llm_service.dart';
 import '../../core/llm/pattern_llm_service.dart';
 import '../../core/llm/nobodywho_llm_service.dart';
 import '../../core/llm/model_manager.dart';
-import '../../core/providers.dart';
 import '../schedule/schedule_controller.dart' as sch_ctrl;
 import '../schedule/schedule_repository.dart';
 import '../schedule/schedule_models.dart' as sch;
