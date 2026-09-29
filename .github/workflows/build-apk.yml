@@ -40,6 +40,16 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Network diagnostics
+        run: |
+          echo "== proxy env =="; env | grep -iE "proxy" || echo "no proxy env"
+          echo "== connectivity =="
+          for u in https://services.gradle.org https://downloads.gradle.org https://mirrors.cloud.tencent.com https://dl.google.com https://repo.maven.apache.org https://github.com; do
+            code=$(curl -s -m 15 -o /dev/null -w "%{http_code}" "$u" || echo "FAIL")
+            echo "$code  $u"
+          done
+          echo "== wrapper file in checkout =="; cat android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Build APK
         run: flutter build apk --release
 
