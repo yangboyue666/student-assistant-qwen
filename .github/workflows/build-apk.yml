@@ -69,8 +69,8 @@ jobs:
           GR="$DISTS/$HASH/gradle-8.10.2/bin/gradle"
           mkdir -p /tmp/gtest && cd /tmp/gtest
           printf 'pluginManagement { repositories { gradlePluginPortal() } }\n' > settings.gradle
-          printf "plugins { id 'org.jetbrains.kotlin.jvm' version '2.0.21' }\n" > build.gradle
-          $GR --no-daemon help --stacktrace 2>&1 | grep -iE "Connect|refused|could not|caused by|http|BUILD |preferIPv4|Picked up" | head -25
+          printf "plugins { id 'org.gradle.kotlin.kotlin-dsl' version '4.5.0' }\n" > build.gradle
+          $GR --no-daemon help --stacktrace 2>&1 | grep -iE "Connect|refused|could not|caused by|http|BUILD |not found|resolve" | head -25
 
       - name: Rename APK
         run: |
