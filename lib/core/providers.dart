@@ -9,7 +9,7 @@ import 'llm/model_manager.dart';
 /// - 若模型已下载：使用 NobodyWhoLlmService（真实千问模型）
 /// - 若模型未下载：使用 PatternBasedLlmService（离线模式匹配 + 工具调用）
 final llmServiceProvider = Provider<LlmService>((ref) {
-  return NobodyWhoLlmService();
+  return NobodyWhoLlmService.instance;
 });
 
 /// 模式匹配后备服务（模型未下载时使用）

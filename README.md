@@ -51,23 +51,15 @@ flutter build apk --release
 
 生成的 APK 位于：`build/app/outputs/flutter-apk/app-release.apk`
 
-### 如需切换为真实端侧 LLM
+### 启用真实端侧 LLM（Qwen3-0.6B）
 
-默认使用 PatternBasedLlmService（纯离线，无需模型文件）。
-如需启用真实端侧 LLM（Qwen3-0.6B），执行以下步骤：
+App 内置**独立的「本地 AI 模型管理」页**，无需手动构建：
 
-1. 下载 `Qwen3-0.6B-Q4_K_M.gguf`（约 379MB），从国内镜像获取：
-   ```
-   https://hf-mirror.com/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf
-   ```
-2. 将模型文件放入 `assets/model/` 目录
-3. 在 `pubspec.yaml` 中取消注释：
-   ```yaml
-   assets:
-     - assets/model/
-   ```
-4. 在 `lib/core/providers.dart` 中切换 LLM 实现（如 nobodywho / flutter_litert_lm）
-5. 重新构建 APK
+1. 在聊天页点击顶部的「升级为千问大模型」小芯片，或在主界面点聊天框头部的记忆体图标，进入模型管理页。
+2. 点「开始下载」，App 会自动在多个镜像源（hf-mirror / ModelScope / Hugging Face）之间切换，带进度与文件校验。
+3. 下载完成后**后台自动加载并热接入**当前对话框：顶部小芯片变为「千问已启用」，直接在原对话框聊天即可，不会弹出任何遮挡框。
+
+下载入口与聊天历史完全分离，未下载或正在下载时都能正常查看对话历史；不下载时继续使用离线 PatternBasedLlmService。
 
 ## 项目结构
 

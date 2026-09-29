@@ -5,3 +5,4 @@ android/.gradle/
 android/app/build/
 android/build/
 assets/model/
+android/local.properties

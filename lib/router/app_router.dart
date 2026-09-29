@@ -5,6 +5,7 @@ import '../features/assignments/assignments_screen.dart';
 import '../features/courses/courses_screen.dart';
 import '../features/moods/mood_screen.dart';
 import '../features/chat/chat_screen.dart';
+import '../features/model/model_manager_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -15,6 +16,7 @@ class AppRoutes {
   static const courses = '/courses';
   static const mood = '/mood';
   static const chat = '/chat';
+  static const modelManager = '/model-manager';
 
   static Map<String, WidgetBuilder> routes() => {
         hub: (_) => const _Placeholder(),
@@ -23,6 +25,7 @@ class AppRoutes {
         courses: (_) => const CoursesScreen(),
         mood: (_) => const MoodScreen(),
         chat: (_) => const ChatScreen(),
+        modelManager: (_) => const ModelManagerScreen(),
       };
 
   static void push(BuildContext context, String route) {

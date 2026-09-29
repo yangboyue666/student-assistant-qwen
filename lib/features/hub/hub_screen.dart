@@ -9,6 +9,7 @@ import '../../shared/widgets/section_indicator.dart';
 import '../../shared/widgets/shimmer_text.dart';
 import '../../shared/widgets/animated_indicators.dart';
 import '../chat/chat_screen.dart';
+import '../model/model_manager_screen.dart';
 
 class HubScreen extends ConsumerStatefulWidget {
   const HubScreen({super.key});
@@ -221,6 +222,26 @@ class _HubScreenState extends ConsumerState<HubScreen>
             ),
           ),
           const Spacer(),
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ModelManagerScreen(),
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.memory_rounded,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: _toggleChat,
             child: Container(

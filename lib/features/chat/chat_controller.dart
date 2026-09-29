@@ -161,23 +161,38 @@ class ChatMessagesNotifier extends StateNotifier<List<UIMessage>> {
     final useRealModel = await ModelManager.instance.isModelDownloaded();
     final LlmService llm;
     if (useRealModel) {
-      llm = NobodyWhoLlmService();
+      llm = NobodyWhoLlmService.instance;
     } else {
       llm = PatternBasedLlmService();
     }
     final allTools = AiTools.all();
 
-    // 4) 流式接收
+    // 4) 流式接收（捕获模型加载 / 推理异常，避免无限"思考"）
     final buf = StringBuffer();
-    await for (final chunk in llm.stream(llmMessages, tools: allTools)) {
-      buf.write(chunk);
+    try {
+      await for (final chunk in llm.stream(llmMessages, tools: allTools)) {
+        buf.write(chunk);
+        state = [
+          for (final m in state)
+            if (m.id == assistantId)
+              m.copyWith(content: buf.toString(), isStreaming: true)
+            else
+              m,
+        ];
+      }
+    } catch (e) {
+      // 真实模型出错：给出明确提示，并结束流式状态
+      final msg = useRealModel
+          ? '本地模型暂时无法响应（$e）。你可以稍后重试，或继续使用基础 AI。'
+          : '出错了：$e';
       state = [
         for (final m in state)
           if (m.id == assistantId)
-            m.copyWith(content: buf.toString(), isStreaming: true)
+            m.copyWith(content: msg, isStreaming: false)
           else
             m,
       ];
+      return;
     }
     final fullText = buf.toString();
 

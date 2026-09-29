@@ -15,13 +15,16 @@ import 'model_manager.dart';
 /// 基于 nobodywho（llama.cpp）的真实端侧 LLM 服务
 ///
 /// - 加载 Qwen3-0.6B GGUF 模型
-/// - 支持流式输出
-/// - 支持原生函数调用（create_schedule / create_assignment / add_course 等）
+/// - 全局单例，避免重复加载模型
+/// - GPU 加载失败自动回退 CPU
+/// - 带加载 / 推理超时和错误兜底
 class NobodyWhoLlmService implements LlmService {
-  NobodyWhoLlmService();
+  NobodyWhoLlmService._();
+  static final NobodyWhoLlmService instance = NobodyWhoLlmService._();
 
   nobodywho.Chat? _chat;
   bool _initialized = false;
+  Future<void>? _loading; // 合并并发加载
 
   @override
   Future<bool> isReady() async {
@@ -32,13 +35,53 @@ class NobodyWhoLlmService implements LlmService {
   @override
   String describe() => 'Qwen3-0.6B · 本地推理（nobodywho / llama.cpp）';
 
-  /// 初始化并加载模型
-  Future<void> ensureLoaded() async {
+  /// 初始化并加载模型（并发安全，多次调用只加载一次）
+  Future<void> ensureLoaded() {
+    return _loading ??= _doLoad();
+  }
+
+  Future<void> _doLoad() async {
     if (_chat != null) return;
     ModelManager.instance.markLoading();
 
     final path = await ModelManager.instance.modelPath;
+    final tools = _buildTools();
 
+    Object? lastError;
+    // 依次尝试：GPU → CPU，避免部分机型 Vulkan 不兼容导致卡死
+    for (final useGpu in [true, false]) {
+      try {
+        _chat = await nobodywho.Chat.fromPath(
+          modelPath: path,
+          systemPrompt: _systemPrompt,
+          tools: tools,
+          contextSize: 4096,
+          useGpu: useGpu,
+        ).timeout(
+          const Duration(seconds: 90),
+          onTimeout: () =>
+              throw TimeoutException('模型加载超时（${useGpu ? 'GPU' : 'CPU'}）'),
+        );
+
+        _initialized = true;
+        ModelManager.instance.markRunning();
+        return;
+      } catch (e) {
+        lastError = e;
+        _chat = null;
+        // GPU 失败则继续尝试 CPU；CPU 也失败则抛出
+        if (!useGpu) break;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+    }
+
+    _initialized = false;
+    _loading = null; // 允许之后重试
+    ModelManager.instance.markError('模型加载失败：$lastError');
+    throw Exception('模型加载失败：$lastError');
+  }
+
+  List<nobodywho.Tool> _buildTools() {
     final createScheduleTool = nobodywho.Tool(
       name: 'create_schedule',
       description:
@@ -202,22 +245,13 @@ class NobodyWhoLlmService implements LlmService {
       },
     );
 
-    _chat = await nobodywho.Chat.fromPath(
-      modelPath: path,
-      systemPrompt: _systemPrompt,
-      tools: [
-        createScheduleTool,
-        createAssignmentTool,
-        addCourseTool,
-        listSchedulesTool,
-        listAssignmentsTool,
-      ],
-      contextSize: 4096,
-      useGpu: true,
-    );
-
-    _initialized = true;
-    ModelManager.instance.markRunning();
+    return [
+      createScheduleTool,
+      createAssignmentTool,
+      addCourseTool,
+      listSchedulesTool,
+      listAssignmentsTool,
+    ];
   }
 
   static const String _systemPrompt = '''你是一个运行在用户手机上的学生智能助手，使用本地 AI 模型（Qwen3-0.6B）推理，完全离线运行。
@@ -256,9 +290,15 @@ class NobodyWhoLlmService implements LlmService {
     final lastUser = _lastUserText(messages);
     if (lastUser == null) return;
     final response = _chat!.ask(lastUser);
-    await for (final token in response) {
-      yield token;
-    }
+
+    // 推理整体超时保护：若长时间无 token 输出则终止，避免无限"思考"
+    yield* response.timeout(
+      const Duration(seconds: 120),
+      onTimeout: (EventSink<String> sink) {
+        sink.addError(TimeoutException('AI 响应超时'));
+        sink.close();
+      },
+    );
   }
 
   String? _lastUserText(List<LlmMessage> messages) {
@@ -272,5 +312,6 @@ class NobodyWhoLlmService implements LlmService {
   Future<void> dispose() async {
     _chat = null;
     _initialized = false;
+    _loading = null;
   }
 }
