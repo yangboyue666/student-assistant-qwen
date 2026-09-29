@@ -40,21 +40,17 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Prefetch & pin Gradle distribution
+      - name: Repository connectivity probe
         run: |
-          # runner IPv6 出口不可用、部分镜像对 Java 拒绝连接；用 curl（强制 IPv4、跟随重定向）预取，再让 wrapper 走本地文件
-          curl -4 -L --retry 3 --retry-all-errors -o /tmp/gradle.zip \
-            https://downloads.gradle.org/distributions/gradle-8.10.2-bin.zip
-          ls -la /tmp/gradle.zip
-          unzip -tq /tmp/gradle.zip >/dev/null && echo "gradle zip verified"
-          cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          distributionUrl=file\:/tmp/gradle.zip
-          EOF
-          echo "== pinned wrapper =="; cat android/gradle/wrapper/gradle-wrapper.properties
+          echo "== hosts =="
+          for u in https://plugins.gradle.org https://plugins.gradle.org/m2/ https://repo.maven.apache.org/maven2/ https://dl.google.com/dl/android/maven2/ https://maven.aliyun.com/repository/public https://maven.aliyun.com/repository/gradle-plugin https://maven.aliyun.com/repository/google https://storage.flutter-io.cn; do
+            code=$(curl -4 -s -m 15 -o /dev/null -w "%{http_code}" "$u" || echo FAIL)
+            echo "$code  $u"
+          done
+          echo "== kotlin-dsl marker on portal =="
+          curl -4 -s -m 15 -o /dev/null -w "%{http_code}\n" https://plugins.gradle.org/m2/org/gradle/kotlin/kotlin-dsl/org.gradle.kotlin.kotlin-dsl.gradle.plugin/4.5.0/ || echo fail
+          echo "== kotlin-dsl marker on aliyun =="
+          curl -4 -s -m 15 -o /dev/null -w "%{http_code}\n" https://maven.aliyun.com/repository/gradle-plugin/org/gradle/kotlin/kotlin-dsl/org.gradle.kotlin.kotlin-dsl.gradle.plugin/4.5.0/ || echo fail
 
       - name: Build APK
         run: flutter build apk --release
