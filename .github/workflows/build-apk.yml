@@ -73,9 +73,11 @@ jobs:
           # 用能联网的独立守护进程把插件及依赖全部拉进共享 Gradle 缓存
           $GR --no-daemon help
           echo "== cache warmed =="; ls "$HOME/.gradle/caches/modules-2/files-2.1" | head
+          # 预热完成后再开启全局离线，仅对后续 Flutter 构建生效
+          echo "org.gradle.offline=true" >> "$HOME/.gradle/gradle.properties"
 
       - name: Build APK
-        run: flutter build apk --release --offline
+        run: flutter build apk --release
 
       - name: Rename APK
         run: |
