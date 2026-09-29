@@ -26,6 +26,7 @@ jobs:
 
       - name: Configure Gradle mirrors
         run: |
+          mkdir -p "$HOME/.gradle"
           # GitHub runner 到 plugins-artifacts.gradle.org 被拒；全局（含 Flutter included build）
           # 用阿里云镜像替换 Gradle 插件门户 / Google / Maven Central
           cat > "$HOME/.gradle/init.gradle" <<'EOF'
