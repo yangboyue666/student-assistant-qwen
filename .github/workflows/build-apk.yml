@@ -19,6 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: 3.27.x
           channel: stable
 
       - name: Prepare debug keystore
@@ -40,23 +41,8 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Repository connectivity probe
-        run: |
-          echo "== hosts =="
-          for u in https://plugins.gradle.org https://plugins.gradle.org/m2/ https://repo.maven.apache.org/maven2/ https://dl.google.com/dl/android/maven2/ https://maven.aliyun.com/repository/public https://maven.aliyun.com/repository/gradle-plugin https://maven.aliyun.com/repository/google https://storage.flutter-io.cn; do
-            code=$(curl -4 -s -m 15 -o /dev/null -w "%{http_code}" "$u" || echo FAIL)
-            echo "$code  $u"
-          done
-          echo "== kotlin-dsl marker on portal =="
-          curl -4 -s -m 15 -o /dev/null -w "%{http_code}\n" https://plugins.gradle.org/m2/org/gradle/kotlin/kotlin-dsl/org.gradle.kotlin.kotlin-dsl.gradle.plugin/4.5.0/ || echo fail
-          echo "== kotlin-dsl marker on aliyun =="
-          curl -4 -s -m 15 -o /dev/null -w "%{http_code}\n" https://maven.aliyun.com/repository/gradle-plugin/org/gradle/kotlin/kotlin-dsl/org.gradle.kotlin.kotlin-dsl.gradle.plugin/4.5.0/ || echo fail
-
       - name: Build APK
         run: flutter build apk --release
-        env:
-          # runner 的 IPv6 出口被拒，Java 默认优先 IPv6 导致 wrapper 下载 Connection refused；强制走 IPv4
-          JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
 
       - name: Rename APK
         run: |
