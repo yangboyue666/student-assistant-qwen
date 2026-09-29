@@ -44,7 +44,7 @@ jobs:
         run: |
           # runner IPv6 出口不可用、部分镜像对 Java 拒绝连接；用 curl（强制 IPv4、跟随重定向）预取，再让 wrapper 走本地文件
           curl -4 -L --retry 3 --retry-all-errors -o /tmp/gradle.zip \
-            https://downloads.gradle.org/distributions/gradle-8.14-bin.zip
+            https://downloads.gradle.org/distributions/gradle-8.10.2-bin.zip
           ls -la /tmp/gradle.zip
           unzip -tq /tmp/gradle.zip >/dev/null && echo "gradle zip verified"
           cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
