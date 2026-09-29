@@ -23,6 +23,25 @@ jobs:
         with:
           channel: stable
 
+      - name: Configure global plugin repositories
+        run: |
+          mkdir -p "$HOME/.gradle"
+          # beforeSettings 对所有构建生效，包括 Flutter 的 included build(flutter_tools)；
+          # 把插件解析指向阿里云，避开被拒的 plugins-artifacts.gradle.org
+          cat > "$HOME/.gradle/init.gradle" <<'EOF'
+          gradle.beforeSettings { settings ->
+            settings.pluginManagement {
+              repositories {
+                clear()
+                maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+                maven { url 'https://maven.aliyun.com/repository/google' }
+                maven { url 'https://maven.aliyun.com/repository/public' }
+                gradlePluginPortal()
+              }
+            }
+          }
+          EOF
+
       - name: Prepare debug keystore
         run: |
           mkdir -p ~/.android
