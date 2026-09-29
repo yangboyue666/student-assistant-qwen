@@ -91,7 +91,12 @@ jobs:
             }
           }
           EOF
-          echo "plugins { id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0' }" > build.gradle
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0'
+              id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+          }
+          EOF
           $GR help --no-daemon
 
       - name: Build APK
