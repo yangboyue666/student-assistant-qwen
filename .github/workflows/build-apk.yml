@@ -89,15 +89,23 @@ jobs:
               maven { url 'https://maven.aliyun.com/repository/public' }
             }
           }
+          include ':sub'
           EOF
           cat > build.gradle <<'EOF'
           plugins {
               id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0'
               id 'org.jetbrains.kotlin.jvm' version '2.2.20'
-              id 'com.android.application' version '8.13.0'
+              id 'com.android.application' version '8.13.0' apply false
           }
           EOF
-          $GR help --no-daemon
+          mkdir -p sub/src/main
+          cat > sub/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android { namespace 'com.warm.sub'; compileSdk 35 }
+          EOF
+          $GR :sub:help --no-daemon
 
       - name: Build APK
         run: flutter build apk --release
