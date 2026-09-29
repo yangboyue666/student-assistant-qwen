@@ -74,7 +74,7 @@ jobs:
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           echo "flutter.sdk=${FLUTTER_ROOT}" >> local.properties
-          $GR help --no-daemon || true
+          $GR :app:help --no-daemon
 
       - name: Build APK
         run: flutter build apk --release
