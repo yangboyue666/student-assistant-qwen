@@ -43,6 +43,25 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Pre-seed Gradle distribution
+        run: |
+          chmod +x android/gradlew
+          DISTS="$HOME/.gradle/wrapper/dists/gradle-8.10.2-bin"
+          # 让真实 wrapper 先算出它的哈希目录（此步联网会被拒，忽略即可，目录会被创建）
+          (cd android && ./gradlew --version) >/dev/null 2>&1 || true
+          HASH=$(ls "$DISTS" 2>/dev/null | head -1)
+          echo "wrapper hash dir = $HASH"
+          ROOT="$DISTS/$HASH"
+          # 用可靠的 curl 下载（强制 IPv4、跟随重定向、多次重试）
+          curl -4 -L --retry 5 --retry-all-errors \
+            -o "$ROOT/gradle-8.10.2-bin.zip" \
+            https://services.gradle.org/distributions/gradle-8.10.2-bin.zip
+          unzip -tq "$ROOT/gradle-8.10.2-bin.zip"
+          (cd "$ROOT" && unzip -q gradle-8.10.2-bin.zip)
+          touch "$ROOT/gradle-8.10.2-bin.zip.ok"
+          echo "== installed gradle =="
+          "$ROOT/gradle-8.10.2/bin/gradle" --version
+
       - name: Build APK
         run: flutter build apk --release
 
