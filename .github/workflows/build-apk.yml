@@ -36,7 +36,6 @@ jobs:
                 maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
                 maven { url 'https://maven.aliyun.com/repository/google' }
                 maven { url 'https://maven.aliyun.com/repository/public' }
-                gradlePluginPortal()
               }
             }
           }
@@ -95,6 +94,7 @@ jobs:
           plugins {
               id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0'
               id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+              id 'com.android.application' version '8.13.0'
           }
           EOF
           $GR help --no-daemon
