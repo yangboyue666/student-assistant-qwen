@@ -75,6 +75,25 @@ jobs:
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Pre-seed Gradle 8.14 distribution
+        run: |
+          mkdir -p "$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
+          chmod +x android/gradlew
+          # 让真实 wrapper 算出它自己的哈希目录（联网被拒也会先建目录）
+          (cd android && ./gradlew --version) >/dev/null 2>&1 || true
+          DISTS="$HOME/.gradle/wrapper/dists/gradle-8.14-bin"
+          HASH=$(find "$DISTS" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | head -1)
+          echo "wrapper hash = $HASH"
+          ROOT="$DISTS/$HASH"; mkdir -p "$ROOT"
+          # 用可靠的 curl 下载本体，使 wrapper 启动时跳过 Java 下载
+          curl -4 -L --retry 5 --retry-all-errors \
+            -o "$ROOT/gradle-8.14-bin.zip" \
+            https://downloads.gradle.org/distributions/gradle-8.14-bin.zip
+          unzip -tq "$ROOT/gradle-8.14-bin.zip"
+          (cd "$ROOT" && unzip -q gradle-8.14-bin.zip)
+          touch "$ROOT/gradle-8.14-bin.zip.ok"
+          "$ROOT/gradle-8.14/bin/gradle" --version
+
       - name: Build APK
         run: flutter build apk --release
 
