@@ -82,6 +82,21 @@ jobs:
           touch "$ROOT/gradle-8.14-bin.zip.ok"
           "$ROOT/gradle-8.14/bin/gradle" --version
 
+      - name: Isolated kotlin-dsl resolve trace
+        run: |
+          GR="$HOME/.gradle/wrapper/dists/gradle-8.14-bin/$(ls "$HOME/.gradle/wrapper/dists/gradle-8.14-bin" | head -1)/gradle-8.14/bin/gradle"
+          mkdir -p /tmp/kd && cd /tmp/kd
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+            repositories {
+              maven { url 'https://maven.aliyun.com/repository/gradle-plugin'; allowInsecureProtocol = true }
+              gradlePluginPortal()
+            }
+          }
+          EOF
+          echo "plugins { id 'org.gradle.kotlin.kotlin-dsl' version '5.2.0' }" > build.gradle
+          $GR help --no-daemon --info 2>&1 | grep -iE "Resource missing|Could not GET|Could not HEAD|Downloading|Download https|response|refused|reset|timeout|checksum|sha|signature|BUILD|5.2.0|Received status|peer|cert|SSL|redirect|Location" | head -60
+
       - name: Build APK
         run: flutter build apk --release
 
